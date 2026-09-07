@@ -13,9 +13,7 @@ terminals can verify and index stamps independently of the hosted read model.
 
 Robinhood's `programmable/read-model-v1` remains planned; its launch and token
 feeds are empty `unavailable` projections with non-authoritative absence.
-`customRegistry.publicSubmissionsEnabled` is `false`, and the V4 API, CLI and
-public write path remain planned. A live direct-chain release does not promote
-those surfaces. Base, BNB Chain, Arbitrum and other EVM networks are not
+`customRegistry.publicSubmissionsEnabled` is `false`; this read-only service has no launch write path. Its historical V4.0 descriptor does not select the current Custom Launch API client. Resolve V4.1 and MultiRole from [product discovery](https://programmable.market/.well-known/programmable.json). Base, BNB Chain, Arbitrum and other EVM networks are not
 published through this API.
 
 Read each capability's own status. A planned Router must never be scanned as

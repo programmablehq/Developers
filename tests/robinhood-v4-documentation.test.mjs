@@ -37,10 +37,15 @@ describe("Robinhood V4 documentation contract", () => {
   test("links the separate V4 write and both source-verification contracts", async () => {
     for (const relativePath of DOCUMENTS) {
       const source = await read(relativePath);
-      for (const url of [V4_OPENAPI, V4_SOURCE_STATUS, V4_DEVELOPER_PROJECTION]) {
+      for (const url of [V4_SOURCE_STATUS, V4_DEVELOPER_PROJECTION]) {
         assert.ok(source.includes(url), `${relativePath} is missing ${url}`);
       }
     }
+  });
+
+  test("keeps historical OpenAPI reachable from the API reference", async () => {
+    assert.ok((await read("docs/README.md")).includes(V4_OPENAPI));
+    assert.ok((await read("docs/README.md")).includes("https://programmable.market/openapi/custom-launch-v4.1.json"));
   });
 
   test("keeps illustrative planned negative examples fail-closed", async () => {

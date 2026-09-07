@@ -32,6 +32,7 @@
           <a href="#verification-results">Verification results</a>
           <a href="#reference-files">Reference files</a>
           <a href="#scope">Scope</a>
+          <a href="#module-mode-and-multirole-v2">Module Mode and MultiRole V2</a>
         </div>
       </nav>
       <main id="main-content" tabindex="-1">
@@ -47,12 +48,13 @@
           <a href="#index-launches">Index launches</a>
           <a href="#verification-results">Verification results</a>
           <a href="#reference-files">Reference files</a>
-          <a href="#scope">Scope</a></nav>
+          <a href="#scope">Scope</a>
+          <a href="#module-mode-and-multirole-v2">Module Mode and MultiRole V2</a></nav>
         </details>
         <article>
 <h1 id="robinhood-terminal-integration">Robinhood terminal integration</h1>
 <p>Identify Programmable Custom tokens on Robinhood Chain Mainnet (<code>4663</code>, <code>eip155:4663</code>) using the canonical Router&#39;s finalized launch stamps. This reference covers token classification and continuous indexing.</p>
-<p>Direct-chain verification is live. The hosted read model and public self-serve V4 API/CLI remain planned. Read the <a href="https://developers.programmable.family/api/v2/manifests/4663">chain manifest (JSON)</a> for the current release state.</p>
+<p>Direct-chain verification is live. Read the <a href="https://developers.programmable.family/api/v2/manifests/4663">chain manifest (JSON)</a> for this Router V1 source. The Developer v2 normalized hosted read model has separate availability and can report unavailable. Custom V4, MultiRole V2 and Module Mode publish their own source interfaces below.</p>
 <span id="example" class="anchor-alias"></span><h2 id="verify-a-token">Verify a token</h2>
 <p>Requirements: Node.js 20 or later and a Robinhood RPC that supports finalized, historical block-hash reads. No Programmable API key or package installation is required. The public RPC below works for the example; use your own provider for production indexing.</p>
 <p>Clone the repository and verify the existing launch referenced by the manifest:</p>
@@ -192,7 +194,33 @@ PROGRAMMABLE_RPC_URL=https://rpc-robinhood.blockmachine.io \
 </tbody></table>
 <h2 id="scope">Scope</h2>
 <p>The stamp establishes launch provenance. It does not establish an audit, safety, liquidity, sellability, trading support, current pool state or a particular fee. A terminal must assess execution support for each market separately.</p>
-<p>This integration reads chain data. It does not submit or sign launches, and it does not depend on the planned hosted indexer or public V4 submission API. Machine clients can read <a href="https://developers.programmable.family/robinhood-terminal-indexer.md">this page as Markdown</a>; its content is the source for the HTML page.</p>
+<p>This integration reads chain data. It does not submit or sign launches, and it does not depend on the normalized hosted indexer or on public Custom Launch admission. Machine clients can read <a href="https://developers.programmable.family/robinhood-terminal-indexer.md">this page as Markdown</a>; its content is the source for the HTML page.</p>
+<h2 id="module-mode-and-multirole-v2">Module Mode and MultiRole V2</h2>
+<p>The Router V1 procedure above verifies its own source. Other Robinhood sources use different contracts and must not inherit V1&#39;s component-role assumptions.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Integration</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Module Mode</td>
+<td><a href="https://programmable.market/developer-reference/module-mode-indexing">Native indexing guide</a> and <a href="https://programmable.market/api/module-mode/indexer/v1">machine-readable contract</a></td>
+</tr>
+<tr>
+<td>MultiRole V2</td>
+<td><a href="https://programmable.market/developer-reference/robinhood-terminal-indexer#multi-role-v2">MultiRole reference</a> and <a href="https://api.programmable.market/v4/chains/4663/multi-role-custom-launches/finalized">public finalized feed</a></td>
+</tr>
+<tr>
+<td>Custom V4 finalized metadata</td>
+<td><a href="https://api.programmable.market/v4/chains/4663/finalized-custom-launches">Source-bound feed</a></td>
+</tr>
+</tbody></table>
+<p>Module Mode verifies native launcher events and getters. Its coins do not require Custom Router stamps. Preserve module IDs, versions and configuration as data; a new module within a supported engine does not require a module-name allowlist.</p>
+<p>MultiRole V2 uses <code>programmable.multi-role-launch-stamp-router.v2</code>. Its list schema is <code>programmable.multi-role-finalized-metadata-list.v2</code>, and a record uses <code>programmable.multi-role-finalized-metadata.v2</code>. Preserve <code>apiLaunchId</code> separately from <code>onchainLaunchId</code>, and identify the coin by <code>market.token</code>. A component with <code>roleMask: 3</code> implements both token and hook, so their addresses may be equal. Do not decode these records with the V1 ABI or reject them for sharing an address.</p>
+<p>For MultiRole, <code>onchain.blockNumber</code>, <code>blockHash</code> and <code>transactionHash</code> identify L2 inclusion. The separate <code>ethereumPosting</code> and <code>ethereumFinalizedCheckpoint</code> objects describe L1 evidence. Traverse opaque cursors through <code>nextCursor: null</code>, verify the original source and protected finality bindings under the published V2 context, and retain its external publication statuses independently. Source publication can be <code>not_verified</code> and indexer publication <code>not_claimed</code>; those fields are not a substitute for the V2 protected finality result.</p>
+<p>Use <code>(chain, token address)</code> for a shared coin index and a separate source-version-specific provenance key. Keep a verified launch visible when optional metadata, prices or trading support are unavailable. An indexer adapter for a new engine or Router protocol must be reviewed against that interface; an unfamiliar coin name is not a new interface.</p>
 
         </article>
         <footer><a href="https://github.com/programmablehq/Developers/issues">Report a documentation issue</a></footer>

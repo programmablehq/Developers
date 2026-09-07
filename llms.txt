@@ -44,9 +44,7 @@ API V1 and V2 retain historical reads; authenticated POST is read-only.
 V3 profile `3.3.0` accepts fresh submissions under its separate server admission
 and wallet-signing contract.
 
-Robinhood (`chainId: 4663`) has live direct-chain Router provenance. Its hosted
-read model and public self-serve V4 API/CLI remain planned; public writes are
-unavailable. An empty unavailable feed is not authoritative absence.
+Robinhood (`chainId: 4663`) has live direct-chain Router provenance. Custom V4 and MultiRole use the current product discovery and their own finalized feeds. Module Mode uses its native source contract. The Developer v2 normalized hosted read model is separate and has no public writes; an empty unavailable feed is not authoritative absence. Its historical V4.0 descriptor can remain planned without describing current V4.1 or MultiRole admission.
 
 Read live state instead of inferring availability from a published schema:
 
@@ -55,6 +53,13 @@ Read live state instead of inferring availability from a published schema:
 - [Developer source-verification projection](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json)
 - [Read API OpenAPI](https://developers.programmable.family/openapi/programmable-v2.yaml)
 - [Response schemas](https://github.com/programmablehq/Developers/tree/main/schemas/v2)
+
+## Other Robinhood sources
+
+- [Current launch discovery](https://programmable.market/.well-known/programmable.json): V4 profile, client and live readiness.
+- [Custom Launch quickstart](https://programmable.market/docs/developers/custom-launch-quickstart): Network and layout selection, API keys and wallet handoff.
+- [Module Mode indexing](https://programmable.market/developer-reference/module-mode-indexing): Native launcher events, source versions and module configuration.
+- [MultiRole V2](https://programmable.market/developer-reference/robinhood-terminal-indexer#multi-role-v2): Combined roles and its separate finalized projection.
 
 ## Consumer rules
 

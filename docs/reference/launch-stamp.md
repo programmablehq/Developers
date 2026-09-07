@@ -22,8 +22,7 @@ canonical finalized boundary and an explicit block must be its finalized
 ancestor. Do not copy the Ethereum address, confirmation count or canary into
 Robinhood verification. See the
 [Robinhood terminal integration](https://developers.programmable.family/robinhood-terminal-indexer).
-The Robinhood hosted read model and self-serve V4 API/CLI remain planned; they
-are not dependencies of a direct-chain stamp lookup.
+The Developer v2 normalized Robinhood hosted read model has separate availability. A direct-chain stamp lookup does not depend on it or on launch API admission. Use [product discovery](https://programmable.market/.well-known/programmable.json) for current V4 and MultiRole launch clients.
 
 The [Robinhood release verifier](../../examples/verify-robinhood-release.mjs)
 runs with Node.js 20 or later from a repository clone, without a package

@@ -1,4 +1,4 @@
-<img src="public/assets/brand/programmable-github-mark-loop.gif" alt="Programmable GitHub mark" width="640">
+![Programmable](https://raw.githubusercontent.com/programmablehq/PROGRAMMABLE/903b3741a6cd2981788cb09c039f0c47994c5d62/public/brand/programmable-cover.png)
 
 # Programmable developer docs
 
@@ -15,7 +15,9 @@ launches on Ethereum and Robinhood Chain.
 | Add Programmable labels to a terminal | [Trading terminals and scanners](docs/guides/terminals-and-scanners.md) |
 | Verify a token or pool directly onchain | [Launch stamp reference](docs/reference/launch-stamp.md) |
 | Read and follow the hosted launch feed | [Hosted feed integration](docs/reference/hosted-feed.md) |
-| Build an API launch integration | [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md) |
+| Launch custom contracts | [Custom Launch quickstart](https://programmable.market/docs/developers/custom-launch-quickstart) |
+| Index Module Mode coins | [Native Module Mode indexing](https://programmable.market/developer-reference/module-mode-indexing) |
+| Index shared token/hook contracts | [MultiRole V2 integration](https://programmable.market/developer-reference/robinhood-terminal-indexer#multi-role-v2) |
 
 The [Robinhood guide is also published as a webpage](https://developers.programmable.family/robinhood-terminal-indexer)
 and as [Markdown for agents](https://developers.programmable.family/robinhood-terminal-indexer.md).
@@ -24,12 +26,12 @@ and as [Markdown for agents](https://developers.programmable.family/robinhood-te
 
 | Chain | Availability |
 | --- | --- |
-| Ethereum · `1` | Classic and Custom Router stamps. Hosted read model published; check feed quality. Public launch API: V3 profile `3.3.0`. |
-| Robinhood · `4663` | Custom Router stamps. Hosted read model and public V4 API / CLI planned. |
+| Ethereum · `1` | Classic and Custom Router stamps. Hosted read model published; check feed quality. Public launch API: [V3 profile guide](docs/guides/direct-native-hook-graph-profile-v3.md), profile `3.3.0`. |
+| Robinhood · `4663` | Custom V4 and MultiRole finalized feeds, plus the native Module Mode source. The Developer v2 normalized hosted read model is separate and reports its own availability. |
 
 Read the [current status](docs/status.md) and each chain's manifest before
 integrating. Deployment addresses, start blocks and runtime hashes come from
-that manifest. A live Router does not establish hosted-feed or launch-API availability.
+that manifest. Read public Custom launch availability from [product discovery](https://programmable.market/.well-known/programmable.json) and the selected API capabilities. The historical V4.0 descriptor in this repository is not the current V4.1 or MultiRole release pointer.
 
 ## Verify a Robinhood launch
 
@@ -114,3 +116,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for changes and
 or integration problems. Report vulnerabilities through [SECURITY.md](SECURITY.md).
 
 [License](LICENSE)
+
+## Community
+
+[Product docs](https://programmable.market/docs) · [Discord](https://discord.com/invite/programmable) · [X](https://x.com/ProgrammableHQ) · [Dune](https://dune.com/programmablehq/analytics)

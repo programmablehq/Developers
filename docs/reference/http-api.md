@@ -103,10 +103,7 @@ live `launchStampRouter` and `directChainIntegration.evidenceUrl` for its
 finalized deployment and launch vector. Require their exact chain, runtime,
 ABI and evidence bindings before direct-chain indexing. The direct-chain
 `finality` policy is independent of the separately gated hosted V4 policy.
-`customRegistry.publicSubmissionsEnabled` remains false; `customLaunchV4`, its
-API/CLI and `programmable/read-model-v1` remain planned. The
-[V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) does
-not activate public writes.
+`customRegistry.publicSubmissionsEnabled` remains false. The compatibility `customLaunchV4` object describes historical V4.0, while the normalized `programmable/read-model-v1` has its own release state. Resolve current Custom V4.1 and MultiRole creation from [product discovery](https://programmable.market/.well-known/programmable.json); this Developer API has no public writes.
 
 Until a reviewed release independently promotes the hosted read model,
 `GET /api/v2/launches?chainId=4663` and the matching token-list request return
@@ -444,7 +441,7 @@ and a live Router does not make a hosted feed complete. See
 
 ## Read-only boundary
 
-v2 never returns transaction payloads, calldata, approvals, or submission endpoints. Market support states can describe separately verified charting, quote, simulation, or execution availability, but this API neither authorizes nor constructs those actions. On Ethereum, the separately hosted V1 and V2 Custom Launch POST routes are write-fenced and V3 profile `3.3.0` is the current fresh-write lane. Robinhood V4 self-serve remains planned with no public writes; its direct-chain provenance is live.
+v2 never returns transaction payloads, calldata, approvals, or submission endpoints. Market support states can describe separately verified charting, quote, simulation, or execution availability, but this API neither authorizes nor constructs those actions. On Ethereum, the separately hosted V1 and V2 Custom Launch POST routes are write-fenced and V3 profile `3.3.0` is the current fresh-write lane. Robinhood direct-chain provenance is live. Custom V4 and MultiRole creation use the separate [Custom Launch API](https://programmable.market/docs/developers/custom-launch-quickstart), while this Developer API has no public writes.
 
 Finality, exact source verification, indexing completeness, and public
 visibility through the feed are separate evidence axes. A finalized transaction can remain

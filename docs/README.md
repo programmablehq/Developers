@@ -5,9 +5,9 @@ chain manifest for current deployment data.
 
 ## Get started
 
-- [Quickstart](quickstart.md) — choose a chain and make the first read-only request.
-- [Integration status](status.md) — direct verification, hosted feeds and launch-API availability.
-- [Examples](../examples/README.md) — runnable consumers and stamp verifiers.
+- [Quickstart](quickstart.md): choose a chain and make the first read-only request.
+- [Integration status](status.md): direct verification, hosted feeds and launch-API availability.
+- [Examples](../examples/README.md): runnable consumers and stamp verifiers.
 
 ## Integrate launches
 
@@ -26,11 +26,11 @@ and as [plain Markdown](https://developers.programmable.family/robinhood-termina
 
 ## Understand the records
 
-- [Data model](concepts/data-model.md) — launches, tokens, assets, markets and capabilities.
-- [Multi-chain discovery](concepts/multi-chain.md) — chain selection and deployment identity.
-- [Programmable Verified](concepts/programmable-verified.md) — the scope of a structured review.
-- [Compatibility](concepts/compatibility.md) — additive fields and unknown values.
-- [FAQ](faq.md) — common integration questions.
+- [Data model](concepts/data-model.md): launches, tokens, assets, markets and capabilities.
+- [Multi-chain discovery](concepts/multi-chain.md): chain selection and deployment identity.
+- [Programmable Verified](concepts/programmable-verified.md): the scope of a structured review.
+- [Compatibility](concepts/compatibility.md): additive fields and unknown values.
+- [FAQ](faq.md): common integration questions.
 
 ## Reference
 
@@ -56,7 +56,9 @@ An API credential does not sign or broadcast a wallet transaction.
 | Contract | Use |
 | --- | --- |
 | [Direct Native Hook Graph V3](guides/direct-native-hook-graph-profile-v3.md) | Current Ethereum profile `3.3.0` |
-| [Robinhood V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) | Planned chain-4663 API contract |
+| [Robinhood V4.1 OpenAPI](https://programmable.market/openapi/custom-launch-v4.1.json) | Versioned chain-4663 contract for separate token and hook roles |
+| [MultiRole V2 guide](https://api.programmable.market/v4/chains/4663/multi-role-custom-launches/guide.md) | Shared token/hook contracts and public finalized metadata |
+| [Module Mode indexing](https://programmable.market/developer-reference/module-mode-indexing) | Native launcher, engine and module configuration |
 | [Programmable Launch Policy](https://github.com/programmablehq/Launch-Policy) | Versioned launch requirements |
 
 Robinhood source verification has a separate
@@ -71,6 +73,8 @@ Their publication does not prove an exact source match for a deployment.
 - [Support](../SUPPORT.md) and [security reporting](../SECURITY.md)
 
 ## Compatibility and historical profiles
+
+[Historical V4.0 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) preserves the original Robinhood response contract.
 
 Use these references for existing integrations and resources. Their publication
 does not enable a fresh launch through a retired or preview profile.
