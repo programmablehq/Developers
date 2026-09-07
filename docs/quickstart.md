@@ -10,9 +10,7 @@ neither requires a Programmable API key or a wallet.
 | Robinhood Chain Mainnet · `4663` | [Verify a Router stamp](#verify-a-robinhood-launch) |
 | Ethereum Mainnet · `1` | [Read the hosted feed](#read-the-ethereum-feed) or [verify a Router stamp](reference/launch-stamp.md) |
 
-Robinhood's direct-chain integration is live. Its hosted read model and public
-self-serve V4 API/CLI remain planned. Check [integration status](status.md) before
-using a path in production.
+Robinhood direct-chain verification is live. Custom V4, MultiRole V2 and Module Mode use separate source interfaces listed in [integration status](status.md). The Developer v2 normalized hosted feed has its own coverage and must not be treated as the directory for every Robinhood source.
 
 ## Discover the contracts
 
@@ -98,8 +96,7 @@ between launch provenance and current metadata, liquidity, fees or execution sup
 A `Programmable Custom` label requires verified canonical evidence.
 
 To prepare and submit a launch, use the separate [Custom Launch API guide](https://programmable.market/docs/developers/custom-launch).
-Its [Robinhood V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json)
-remains a planned contract. Source verification uses the
+Resolve the current V4 profile and MultiRole client through [product discovery](https://programmable.market/.well-known/programmable.json). Historical V4.0 source verification uses the
 [API status contract](https://programmable.market/schemas/custom-launch/v4/source-verification-status.json)
 and [Developer projection schema](https://developers.programmable.family/schemas/v2/custom-launch-source-verification-v4.schema.json).
 The controller wallet reviews, signs and broadcasts separately.

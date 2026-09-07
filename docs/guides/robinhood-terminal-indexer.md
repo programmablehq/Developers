@@ -2,7 +2,7 @@
 
 Identify Programmable Custom tokens on Robinhood Chain Mainnet (`4663`, `eip155:4663`) using the canonical Router's finalized launch stamps. This reference covers token classification and continuous indexing.
 
-Direct-chain verification is live. The hosted read model and public self-serve V4 API/CLI remain planned. Read the [chain manifest (JSON)](https://developers.programmable.family/api/v2/manifests/4663) for the current release state.
+Direct-chain verification is live. Read the [chain manifest (JSON)](https://developers.programmable.family/api/v2/manifests/4663) for this Router V1 source. The Developer v2 normalized hosted read model has separate availability and can report unavailable. Custom V4, MultiRole V2 and Module Mode publish their own source interfaces below.
 
 ## Verify a token
 
@@ -87,4 +87,22 @@ Empty or unavailable hosted feeds are not proof that no launches exist. Index th
 
 The stamp establishes launch provenance. It does not establish an audit, safety, liquidity, sellability, trading support, current pool state or a particular fee. A terminal must assess execution support for each market separately.
 
-This integration reads chain data. It does not submit or sign launches, and it does not depend on the planned hosted indexer or public V4 submission API. Machine clients can read [this page as Markdown](https://developers.programmable.family/robinhood-terminal-indexer.md); its content is the source for the HTML page.
+This integration reads chain data. It does not submit or sign launches, and it does not depend on the normalized hosted indexer or on public Custom Launch admission. Machine clients can read [this page as Markdown](https://developers.programmable.family/robinhood-terminal-indexer.md); its content is the source for the HTML page.
+
+## Module Mode and MultiRole V2
+
+The Router V1 procedure above verifies its own source. Other Robinhood sources use different contracts and must not inherit V1's component-role assumptions.
+
+| Source | Integration |
+| --- | --- |
+| Module Mode | [Native indexing guide](https://programmable.market/developer-reference/module-mode-indexing) and [machine-readable contract](https://programmable.market/api/module-mode/indexer/v1) |
+| MultiRole V2 | [MultiRole reference](https://programmable.market/developer-reference/robinhood-terminal-indexer#multi-role-v2) and [public finalized feed](https://api.programmable.market/v4/chains/4663/multi-role-custom-launches/finalized) |
+| Custom V4 finalized metadata | [Source-bound feed](https://api.programmable.market/v4/chains/4663/finalized-custom-launches) |
+
+Module Mode verifies native launcher events and getters. Its coins do not require Custom Router stamps. Preserve module IDs, versions and configuration as data; a new module within a supported engine does not require a module-name allowlist.
+
+MultiRole V2 uses `programmable.multi-role-launch-stamp-router.v2`. Its list schema is `programmable.multi-role-finalized-metadata-list.v2`, and a record uses `programmable.multi-role-finalized-metadata.v2`. Preserve `apiLaunchId` separately from `onchainLaunchId`, and identify the coin by `market.token`. A component with `roleMask: 3` implements both token and hook, so their addresses may be equal. Do not decode these records with the V1 ABI or reject them for sharing an address.
+
+For MultiRole, `onchain.blockNumber`, `blockHash` and `transactionHash` identify L2 inclusion. The separate `ethereumPosting` and `ethereumFinalizedCheckpoint` objects describe L1 evidence. Traverse opaque cursors through `nextCursor: null`, verify the original source and protected finality bindings under the published V2 context, and retain its external publication statuses independently. Source publication can be `not_verified` and indexer publication `not_claimed`; those fields are not a substitute for the V2 protected finality result.
+
+Use `(chain, token address)` for a shared coin index and a separate source-version-specific provenance key. Keep a verified launch visible when optional metadata, prices or trading support are unavailable. An indexer adapter for a new engine or Router protocol must be reviewed against that interface; an unfamiliar coin name is not a new interface.

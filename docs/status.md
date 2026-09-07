@@ -17,10 +17,9 @@ curl -fsSL https://developers.programmable.family/api/v2/manifests/4663
 | --- | --- | --- |
 | Direct Router verification | Live: Classic and Custom stamps | Live: Custom stamps |
 | Developer hosted read model | Published; inspect response quality | Planned; unavailable |
-| Public Custom launch API | V3 profile `3.3.0` | V4 API / CLI planned |
+| Public Custom launch API | V3 profile `3.3.0` | V4 for separate contracts; MultiRole V2 for shared roles. Resolve current clients from product discovery. |
 
-For Robinhood (`chainId: 4663`), the direct-chain integration is live while
-public writes remain unavailable. Require `directChainIntegration.status: "live"`
+For Robinhood (`chainId: 4663`), the direct-chain integration is live. This Developer API has no public writes; Custom Launch preparation uses a separate service. Require `directChainIntegration.status: "live"`
 and a complete live `launchStampRouter` entry. Follow the manifest's `evidenceUrl`
 and finality policy before accepting a launch.
 
@@ -39,10 +38,11 @@ These are separate from the read-only Developer v2 API.
 | Ethereum, V3 profile `3.3.0` | Accepts fresh submissions with server admission and separate wallet signing |
 | Ethereum, Direct Native Hook Graph V2 | Historical reads and exact-byte retries; no fresh requests |
 | Ethereum, Direct Native Hook Graph V1 | Retained gated preview; not publicly routable through V1 |
-| Robinhood (`4663`), Custom Launch API V4 | Planned; public writes and CLI activation unavailable |
+| Robinhood (`4663`), Custom Launch API V4 | Separate contracts under the profile and immutable client in product discovery |
+| Robinhood (`4663`), MultiRole V2 | Shared token/hook contracts under its own capabilities, client and context |
 
 V1 and V2 POST requests return nonretryable `409 CUSTOM_LAUNCH_V1_READ_ONLY`
-and `409 CUSTOM_LAUNCH_V2_READ_ONLY`, respectively. Resolve the active write
+and `409 CUSTOM_LAUNCH_V2_READ_ONLY`, respectively. Resolve the active Ethereum write
 pointer from discovery `currentCreate` or status `currentCustomLaunchCreate`.
 The status field `customLaunchApi` is the retained V1 compatibility object.
 
@@ -110,3 +110,14 @@ See [terminal integration](guides/terminals-and-scanners.md) and the
 Named partner support also requires published evidence. Planning notes or a
 partner name do not establish an approved template, recipient or fee path;
 see [platform fees](reference/fees.md).
+
+## Robinhood source interfaces
+
+| Source | Public integration |
+| --- | --- |
+| Module Mode | [Native launcher and module indexing](https://programmable.market/developer-reference/module-mode-indexing) |
+| Custom V4 | [Finalized launch feed](https://api.programmable.market/v4/chains/4663/finalized-custom-launches) |
+| MultiRole V2 | [Finalized launch feed](https://api.programmable.market/v4/chains/4663/multi-role-custom-launches/finalized) and [capabilities](https://api.programmable.market/v4/chains/4663/multi-role-custom-launches/capabilities) |
+| New Custom Launch requests | [API quickstart](https://programmable.market/docs/developers/custom-launch-quickstart) and [product discovery](https://programmable.market/.well-known/programmable.json) |
+
+The compatibility V4.0 object in the Developer manifest can remain `planned` while a separately released V4.1 or MultiRole API is available. It is not a current launch-admission signal. Keep the source interfaces and the Developer v2 normalized hosted service separate.

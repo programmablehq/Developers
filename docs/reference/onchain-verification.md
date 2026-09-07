@@ -15,9 +15,7 @@ its finality policy. Its existing finalized launch vector is resolved through
 defines the discovery and independent indexing path for every future
 `CustomGraph` stamp, including individual custom hooks.
 
-Robinhood's hosted read model and self-serve V4 API/CLI remain planned, with no
-public write path promoted here. Its empty `unavailable` hosted feed remains
-non-authoritative. A prepared binding or the
+The Developer v2 normalized Robinhood hosted read model is separate from the Custom Launch API and has no public write path. Its empty `unavailable` hosted feed remains non-authoritative. Resolve Custom V4 and MultiRole availability from [product discovery](https://programmable.market/.well-known/programmable.json). A prepared binding or the
 [V4 OpenAPI](https://programmable.market/openapi/custom-launch-v4.json) alone is
 not onchain deployment evidence; use the actual released manifest roots.
 
