@@ -43,9 +43,10 @@ describe("documentation contract", () => {
     }
     assert.match(readme, /docs\/reference\/fees\.md/);
     assert.ok(fees.includes(FEE_RECIPIENT));
-    assert.match(fees, /10 basis points/);
-    assert.match(fees, /0\.1 percent/);
-    assert.match(fees, /1,000 parts per million/);
+    assert.match(fees, /30 basis points\n0\.3 percent\n3,000 parts per million/);
+    assert.match(fees, /Earlier fee profiles/);
+    assert.match(fees, /10 basis points \(0\.1 percent, 1,000 parts per million\)/);
+    assert.match(fees, /Existing contracts and exact versioned API profiles retain their recorded rates/);
     assert.match(readme, /v2 API is read-only/i);
     assert.match(readme, /programmable-launch-stamp-router-v1\.json/i);
     assert.match(readme, /docs\/reference\/launch-stamp\.md/i);
