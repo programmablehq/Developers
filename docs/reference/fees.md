@@ -2,23 +2,31 @@
 
 Programmable discloses fees as structured data so integrators do not have to infer behavior from a category, token name, or hook source.
 
-## Platform recipient
+## Current Ethereum Mainnet Custom Hooks
 
-The Programmable platform fee recipient is:
+The current Programmable platform fee for Ethereum Mainnet Custom Hook launches is:
+
+```text
+30 basis points
+0.3 percent
+3,000 parts per million
+```
+
+It applies to each successful buy or sell through the launch's fee-bearing pool. Project fees and liquidity-provider fees are separate. At this rate, a 1 ETH trade allocates 0.003 ETH to Programmable.
+
+Read the exact hook configuration for the fee basis, asset, accounting mode, recipient, rounding, accrual and claim path. A Router stamp establishes launch origin; it does not certify fee enforcement, collection or payment. The [direct Ethereum launch reference](https://programmable.market/developer-reference/ethereum-custom-hook#fees) explains the current launch policy.
+
+Existing contracts and exact versioned API profiles retain their recorded rates. The compatibility values below describe those paths and are not a universal fee for new Ethereum Custom Hook launches. Do not replace a versioned field or derive a fee from the launch category or `PoolKey.fee`.
+
+## Earlier fee profiles
+
+The following Classic and retained Custom profiles use 10 basis points (0.1 percent, 1,000 parts per million). Their platform recipient is:
 
 ```text
 0x4957f49620AFf3Adbbe8195a4f633E49cc93376c
 ```
 
-The platform rate is:
-
-```text
-10 basis points
-0.1 percent
-1,000 parts per million
-```
-
-Read the manifest and record rather than copying these values into fee-verification logic. The machine-readable disclosure distinguishes verified Classic paths from retained exact Custom profiles. A rate and recipient without a bound deployed path are not proof of accrual or payment.
+Read the manifest and record rather than copying these values into fee-verification logic. A rate and recipient without a bound deployed path are not proof of accrual or payment.
 
 ## Classic
 

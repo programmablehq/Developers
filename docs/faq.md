@@ -83,7 +83,11 @@ No. A recognized onchain event remains discoverable when name, symbol, decimals,
 
 Launch-list and token-list routes do not turn incomplete source coverage into a blanket `503`. They return the recognized bounded records they can establish and mark feed quality `degraded` or `unavailable` as appropriate. A retryable `503` is reserved for a failure that prevents the response itself from being produced. Missing metadata, market enrichment, or supply produces degraded quality rather than hiding recognized launches. During partial coverage, a known detail record can still be returned; an unknown address is not treated as a definitive `404` until coverage is complete.
 
-## How does the 0.1% fee work?
+## How does the platform fee work?
+
+Current Ethereum Mainnet Custom Hook launches use a **0.30% (30 bps)** Programmable platform fee on each successful buy or sell through the launch's fee-bearing pool. A 1 ETH trade at this rate allocates 0.003 ETH to Programmable. Project and LP fees are separate. A stamp establishes origin; fee enforcement and payment require evidence from the exact deployed hook.
+
+Earlier contracts and versioned API profiles retain their recorded rates. The following 0.10% examples describe those earlier paths, not the current Ethereum Custom Hook launch policy.
 
 Current Classic official paths include the 10 bps Programmable share within the configured trading fee. The retained historical Custom Fee-Enforced V2 profile specifies an additive 1,000 ppm on the gross amount of the unspecified pool currency for each successful swap through its exact bound pool. That profile does not make unrelated hooks or markets fee-enforced. Exact input accounts the output currency; exact output accounts the input currency. The sealed vault holds PoolManager ERC-6909 claims that only the fixed reward wallet can claim. Read each verified fee disclosure rather than deriving economics from the category.
 
