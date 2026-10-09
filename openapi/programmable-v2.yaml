@@ -298,6 +298,12 @@ paths:
         record's `LaunchKindV1` value. The shared Classic hook is not a launch
         identity and must not classify a Classic launch. Only a consistent
         record from the exact canonical Router qualifies through Router V1.
+        Ethereum successor deployments are also listed in
+        `extensions["programmable/launch-stamp-router-generations-v1"].routers`.
+        Include every listed Router when discovering stamps. Each has its own
+        address, start block and runtime identity; `verificationInterfacePointer`
+        references the shared V1 events and getter ABI. The original top-level
+        descriptor remains valid for its own launches.
         `customFeeEnforcedLaunchProfileV2` is a separate retained historical
         launch profile, not Custom Registry Generation 2 and not a third public
         category. Its exact revision and hash are authoritative. Publication
