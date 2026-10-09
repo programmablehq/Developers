@@ -6,6 +6,14 @@ It does not universally prove that each Classic component was newly created. It 
 
 ## Deployment state
 
+For Ethereum, include both the original `launchStampRouter` and the additional
+deployments in `extensions["programmable/launch-stamp-router-generations-v1"].routers`.
+The 24-hour Router uses the same public V1 verification ABI, events and stamp
+format, with its own address, start block and runtime hash in that inventory.
+Apply the verification procedure below to the selected deployment; never
+require a successor's event to originate from the original Router address.
+See [Ethereum Router generations](../guides/indexers.md#ethereum-router-generations).
+
 The frozen Router V1 interface and separate Ethereum and Robinhood deployment roots are published. Read the exact Router address and block range from the manifest. Its `deploymentEvidence` object pins the transaction, block hashes, runtime identities, immutable getter observations, and evidence hashes. Its `verificationStatus: finalized-verified` describes those deployment, runtime, and getter observations; it is not an Explorer source-publication status.
 
 Router V1 is live on Ethereum for stamps written at or after block `25717612`.

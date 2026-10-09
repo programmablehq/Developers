@@ -4,6 +4,29 @@ Use the hosted API when the selected chain has a released read model. Independen
 
 Both paths must use the same identities and lifecycle rules.
 
+## Ethereum Router generations
+
+Read `launchStampRouter` and every entry in
+`extensions["programmable/launch-stamp-router-generations-v1"].routers`.
+The original Router remains valid for its launches; the additional 24-hour
+Router accepts newer Custom launches. Each address has its own start block
+and runtime hash. Scan and verify every published generation, using its
+receipt address, record getters, token proof and immutable bindings. Never
+infer a new trusted Router from token metadata or a source-supplied address.
+
+The shared V1 verification ABI and event signatures apply to both generations.
+The [discovery example](../../examples/discover-router-generations.mjs) resolves
+their descriptors without treating discovery as verified provenance.
+Key provenance by `(chainId, routerAddress, launchId)` and token assets by
+`(chainId, tokenAddress)`. The canonical identity snapshot contains both.
+A missing third-party launchpad badge does not invalidate a verified stamp.
+
+Publish only after the launch block is at or below Ethereum's finalized
+checkpoint and has at least 64 subsequent blocks at the current head. These
+are independent checks; do not subtract another 64 blocks from the finalized
+checkpoint. Every published generation must be complete through the chosen
+snapshot boundary, or retain the last known good snapshot.
+
 ## Module Mode sources
 
 Read the chain manifest's `extensions["programmable/module-discovery-v1"]` for Module Mode discovery. Its `launchFeedUrl` exposes current website records; follow every page and preserve each source's evidence. The normalized Developer v2 feed does not yet cover every module source, so its absence cannot reject a module launch.

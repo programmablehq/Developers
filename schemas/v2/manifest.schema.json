@@ -572,7 +572,19 @@
       "additionalProperties": false
     },
     "extensions": {
-      "$ref": "common.schema.json#/$defs/extensions"
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/extensions"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "programmable/launch-stamp-router-generations-v1": {
+              "$ref": "#/$defs/launchStampRouterGenerations"
+            }
+          }
+        }
+      ]
     },
     "directChainIntegration": {
       "$ref": "direct-chain-integration.schema.json"
@@ -3034,6 +3046,101 @@
         }
       },
       "additionalProperties": false
+    },
+    "launchStampRouterGenerations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "chainId",
+        "primaryRouterPointer",
+        "identityScope",
+        "sourceUrl",
+        "routers"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "programmable.launch-stamp-router-generations.v1"
+        },
+        "chainId": {
+          "const": 1
+        },
+        "primaryRouterPointer": {
+          "const": "/launchStampRouter"
+        },
+        "identityScope": {
+          "const": "chain-id+router-address+launch-id"
+        },
+        "sourceUrl": {
+          "const": "https://programmable.market/api/indexers/v1/router-custom-identities"
+        },
+        "routers": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "address",
+              "startBlock",
+              "endBlock",
+              "runtimeCodeHash",
+              "contractName",
+              "abiUrl",
+              "abiSha256",
+              "finalityConfirmations",
+              "canonicalReadBlock",
+              "bindings",
+              "verificationInterfacePointer"
+            ],
+            "properties": {
+              "status": {
+                "const": "live"
+              },
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "startBlock": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "endBlock": {
+                "type": "null"
+              },
+              "runtimeCodeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{64}$"
+              },
+              "contractName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "abiUrl": {
+                "type": "string",
+                "pattern": "^https://"
+              },
+              "abiSha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "finalityConfirmations": {
+                "const": 64
+              },
+              "canonicalReadBlock": {
+                "const": "finalized"
+              },
+              "bindings": {
+                "$ref": "#/$defs/launchStampRouter/properties/bindings"
+              },
+              "verificationInterfacePointer": {
+                "const": "/launchStampRouter"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

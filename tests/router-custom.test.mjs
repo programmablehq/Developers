@@ -311,6 +311,7 @@ function word(value) {
 function rpcIdentity(entry) {
   const provenance = entry.launchStampProvenance;
   return {
+    routerAddress: provenance.routerAddress,
     launchId: provenance.launchId.toLowerCase(),
     stampHash: provenance.stampHash.toLowerCase(),
     transactionHash: provenance.transactionHash.toLowerCase(),
@@ -331,7 +332,7 @@ function rpcIdentity(entry) {
 
 function launchLog(identity) {
   return {
-    address: manifest.launchStampRouter.address,
+    address: identity.routerAddress,
     topics: [
       manifest.launchStampRouter.events.launchStamped.topic0,
       identity.launchId,
@@ -426,10 +427,10 @@ function serveSource(payload, options = {}) {
     } else if (request.method === "eth_getLogs") {
       const fromBlock = Number(BigInt(first.fromBlock));
       const toBlock = Number(BigInt(first.toBlock));
-      result = Number(next.blockNumber) >= fromBlock &&
-        Number(next.blockNumber) <= toBlock
-        ? [launchLog(next)]
-        : [];
+      result = identities.filter(identity =>
+        identity.routerAddress.toLowerCase() === first.address.toLowerCase() &&
+        Number(identity.blockNumber) >= fromBlock && Number(identity.blockNumber) <= toBlock
+      ).map(launchLog);
     } else if (request.method === "eth_getTransactionReceipt") {
       const identity = identities.find((entry) =>
         entry.transactionHash === String(first).toLowerCase());
@@ -489,6 +490,55 @@ async function fallbackRecords() {
 }
 
 describe("Router Custom v2 projection", () => {
+  test("discovers the 24-hour successor alongside the original Router", async () => {
+    const payload = currentSourcePayload();
+    const successor = manifest.extensions["programmable/launch-stamp-router-generations-v1"].routers[0];
+    const next = payload.entries.at(-1);
+    Object.assign(next.launchStampProvenance, {
+      routerAddress: successor.address, routerRuntimeCodeHash: successor.runtimeCodeHash,
+      routerStartBlock: successor.startBlock, blockNumber: "26156902",
+      finalizedAtBlockNumber: "26156980",
+    });
+    next.launchBlockNumber = "26156902";
+    Object.assign(next.launchCategoryProvenance, { routerAddress: successor.address, blockNumber: "26156902" });
+    payload.asOfBlock = "26156980";
+    recommitSourcePayload(payload);
+    const rpcRequests = [];
+    serveSource(payload, { chainPayload: payload, rpcRequests });
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "current");
+    assert.equal(snapshot.records.length, 3);
+    const record = snapshot.records.find(record => record.token.symbol === "NEXT");
+    assert.equal(isRouterStampedCustom(record, manifest), true);
+    assert.equal(record.verification.launcherAddress, successor.address);
+    assert.ok(rpcRequests.some(request => request.method === "eth_getLogs" &&
+      request.params[0].address === successor.address));
+  });
+
+  test("does not let source metadata add an unpublished Router", async () => {
+    const payload = currentSourcePayload();
+    const next = payload.entries.at(-1);
+    next.launchStampProvenance.routerAddress = "0x3333333333333333333333333333333333333333";
+    next.launchCategoryProvenance.routerAddress = next.launchStampProvenance.routerAddress;
+    recommitSourcePayload(payload);
+    serveSource(payload, { chainPayload: payload });
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "last-known-good");
+    assert.equal(snapshot.records.length, 2);
+  });
+
+  test("counts confirmations from the head without delaying a finalized launch twice", async () => {
+    const payload = currentSourcePayload();
+    // The head is 10 blocks above the checkpoint: 70 confirmations, but only
+    // 60 blocks between inclusion and the finalized checkpoint.
+    payload.asOfBlock = "25833380";
+    recommitSourcePayload(payload);
+    serveSource(payload, { chainPayload: payload });
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "current");
+    assert.ok(snapshot.records.some(record => record.token.symbol === "NEXT"));
+  });
+
   test("recognizes a canonical Router launch executed through an ERC-4337 EntryPoint", async () => {
     serveSource(currentSourcePayload(), { receiptTo: "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789" });
     const snapshot = await readRouterCustomRecords(manifest);

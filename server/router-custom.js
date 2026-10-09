@@ -430,8 +430,7 @@ function projectedTokenMetadata(projectMetadata) {
   };
 }
 
-function exactRouterBinding(manifest) {
-  const router = manifest?.launchStampRouter;
+function exactRouterBinding(manifest, router = manifest?.launchStampRouter) {
   const runtimeCodeHash = router?.runtimeCodeHash;
   const getter = (name, signature, selector) =>
     router?.getters?.[name]?.signature === signature &&
@@ -500,6 +499,40 @@ function exactRouterBinding(manifest) {
       stampProof: router.getters.stampProof.selector,
     }),
   };
+}
+
+function exactRouterBindings(manifest) {
+  const primary = exactRouterBinding(manifest);
+  const inventory = manifest.extensions?.["programmable/launch-stamp-router-generations-v1"];
+  if (!inventory) return [primary];
+  if (inventory.schemaVersion !== "programmable.launch-stamp-router-generations.v1" ||
+      inventory.chainId !== primary.chainId || !Array.isArray(inventory.routers) ||
+      inventory.routers.length > 8) {
+    throw new Error("Router generation inventory is invalid");
+  }
+  const bindings = [primary, ...inventory.routers.map(router => {
+    if (router.verificationInterfacePointer !== "/launchStampRouter" ||
+        router.abiUrl !== manifest.launchStampRouter.abiUrl ||
+        router.abiSha256 !== manifest.launchStampRouter.abiSha256) {
+      throw new Error("Router generation does not share the published V1 verification interface");
+    }
+    return exactRouterBinding(manifest, { ...router,
+      events: manifest.launchStampRouter.events,
+      getters: manifest.launchStampRouter.getters,
+      enumValues: manifest.launchStampRouter.enumValues,
+    });
+  })];
+  if (new Set(bindings.map(binding => binding.address.toLowerCase())).size !== bindings.length ||
+      bindings.some(binding => binding.finalityConfirmations !== primary.finalityConfirmations)) {
+    throw new Error("Router generation inventory has duplicate or incompatible bindings");
+  }
+  return bindings;
+}
+
+function bindingForAddress(bindings, address) {
+  const binding = bindings.find(candidate => sameHex(candidate.address, address));
+  if (!binding) throw new Error("Launch belongs to an unpublished Router generation");
+  return binding;
 }
 
 function canonicalRouterEntry(raw, binding, boundary, requirePinned = true) {
@@ -906,7 +939,7 @@ async function finalizedCustomLaunchLogs(binding, finalized, checkpoint) {
   }
   const ranges = [];
   for (
-    let fromBlock = checkpoint + 1;
+    let fromBlock = Math.max(checkpoint + 1, Number(BigInt(binding.startBlock)));
     fromBlock <= finalized.blockNumber;
     fromBlock += ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS
   ) {
@@ -952,7 +985,7 @@ async function finalizedCustomLaunchLogs(binding, finalized, checkpoint) {
   return { logs: custom, records };
 }
 
-async function requireFinalizedSourceEntry(entry, log, record, binding, finalized) {
+async function requireFinalizedSourceEntry(entry, log, record, binding, finalized, head) {
   if (
     entry.launchId.toLowerCase() !== log.launchId ||
     !sameHex(entry.tokenAddress, log.tokenAddress) ||
@@ -966,8 +999,9 @@ async function requireFinalizedSourceEntry(entry, log, record, binding, finalize
     entry.transactionIndex !== log.transactionIndex ||
     entry.logIndex !== log.logIndex ||
     !sameHex(entry.launchWallet, record.launchWallet) ||
+    BigInt(entry.blockNumber) > BigInt(finalized.blockNumber) ||
     BigInt(entry.blockNumber) + BigInt(binding.finalityConfirmations) >
-      BigInt(finalized.blockNumber)
+      BigInt(head.blockNumber)
   ) {
     throw new Error("Router Custom source entry lacks exact finalized evidence");
   }
@@ -1057,7 +1091,8 @@ async function currentSource(manifest, baseline) {
     ])) {
       throw new Error("Router Custom source envelope is invalid");
     }
-    const binding = exactRouterBinding(manifest);
+    const bindings = exactRouterBindings(manifest);
+    const binding = bindings[0];
     const boundary = sourceBoundary(payload, binding);
     // This is a transport-integrity check only. Publication authority comes
     // from the finalized Router logs, record getter, token proof and receipt.
@@ -1081,7 +1116,8 @@ async function currentSource(manifest, baseline) {
       }
     }
     const sourceEntries = validateCurrentIdentitySet(
-      payload.entries.map((entry) => sourceEntry(entry, binding, boundary)),
+      payload.entries.map((entry) => sourceEntry(entry,
+        bindingForAddress(bindings, entry.launchStampProvenance?.routerAddress), boundary)),
     );
     const finalized = await readFinalizedBlock();
     const head = await readHeadBlock();
@@ -1114,8 +1150,10 @@ async function currentSource(manifest, baseline) {
 
     // A source can be ahead of this provider's finalized view. Publish its
     // independently verified prefix instead of dropping every newer launch.
+    // Confirmations are measured from the head, independently of consensus
+    // finality. Subtracting them from the finalized checkpoint waits twice.
     const publicationBlock = Math.min(sourceBlockNumber,
-      finalized.blockNumber - binding.finalityConfirmations);
+      finalized.blockNumber, head.blockNumber - binding.finalityConfirmations);
     const checkpoint = Number(BigInt(baseline.asOfBlock));
     if (publicationBlock < checkpoint) throw new Error("Router finalized boundary regressed behind the accepted checkpoint");
     const publication = await readBlock(publicationBlock, finalized.provider);
@@ -1125,31 +1163,24 @@ async function currentSource(manifest, baseline) {
     }
     const entries = sourceEntries.filter(entry => Number(BigInt(entry.blockNumber)) <= publicationBlock);
     const acceptedIds = new Set(baseline.entries.map(entry => entry.launchId.toLowerCase()));
-    const chain = await finalizedCustomLaunchLogs(binding, { ...finalized, blockNumber: publicationBlock }, checkpoint);
     const additions = entries.filter(entry => !acceptedIds.has(entry.launchId.toLowerCase()));
-    if (
-      additions.some((entry) =>
-        BigInt(entry.blockNumber) <= BigInt(baseline.asOfBlock)) ||
-      additions.length !== chain.logs.length
-    ) {
+    if (additions.some((entry) => BigInt(entry.blockNumber) <= BigInt(baseline.asOfBlock))) {
       throw new Error("Router Custom source is not the complete finalized suffix");
     }
-    const sourceByLaunch = new Map(
-      additions.map((entry) => [entry.launchId.toLowerCase(), entry]),
-    );
-    await mapBounded(chain.logs, async log => {
-      const entry = sourceByLaunch.get(log.launchId);
-      const record = chain.records.get(log.launchId);
-      if (!entry || !record) {
-        throw new Error("Router Custom source omitted a finalized launch");
+    await mapBounded(bindings, async currentBinding => {
+      const chain = await finalizedCustomLaunchLogs(currentBinding,
+        { ...finalized, blockNumber: publicationBlock }, checkpoint);
+      const currentAdditions = additions.filter(entry => sameHex(entry.routerAddress, currentBinding.address));
+      if (currentAdditions.length !== chain.logs.length) {
+        throw new Error("Router Custom source is not the complete finalized suffix");
       }
-      await requireFinalizedSourceEntry(
-        entry,
-        log,
-        record,
-        binding,
-        finalized,
-      );
+      const sourceByLaunch = new Map(currentAdditions.map(entry => [entry.launchId.toLowerCase(), entry]));
+      await mapBounded(chain.logs, async log => {
+        const entry = sourceByLaunch.get(log.launchId);
+        const record = chain.records.get(log.launchId);
+        if (!entry || !record) throw new Error("Router Custom source omitted a finalized launch");
+        await requireFinalizedSourceEntry(entry, log, record, currentBinding, finalized, head);
+      });
     });
     const closing = await readBlock(finalized.blockNumber, finalized.provider);
     if (!sameHex(closing.blockHash, finalized.blockHash)) {
@@ -2149,7 +2180,7 @@ export function isRouterStampedCustom(record, manifest) {
   const extension = record.extensions["programmable/router-stamp-v1"];
   let binding;
   try {
-    binding = exactRouterBinding(manifest);
+    binding = bindingForAddress(exactRouterBindings(manifest), extension.routerAddress);
   } catch {
     return false;
   }
