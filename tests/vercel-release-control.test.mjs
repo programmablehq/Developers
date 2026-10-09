@@ -5831,12 +5831,15 @@ test("pins planned deployment/readback and a protected two-phase Vercel workflow
   for (const [packagePath, version] of Object.entries({
     "node_modules/@tootallnate/once": "2.0.1",
     "node_modules/@vercel/node/node_modules/path-to-regexp": "6.3.0",
-    "node_modules/js-yaml": "4.3.1",
+    "node_modules/js-yaml": "4.3.2",
     "node_modules/minimatch": "10.2.6",
     "node_modules/path-to-regexp": "8.4.2",
-    "node_modules/smol-toml": "1.8.0",
+    "node_modules/smol-toml": "1.9.1",
     "node_modules/tar": "7.5.22",
-    "node_modules/undici": "6.28.0",
+    "node_modules/undici": "6.29.0",
+    "node_modules/@vercel/sandbox/node_modules/undici": "7.29.1",
+    "node_modules/fast-uri": "3.1.8",
+    "node_modules/ts-morph": "28.0.0",
     "node_modules/vercel": "59.10.0",
   })) {
     assert.equal(packageLock.packages[packagePath]?.version, version,
