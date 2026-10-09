@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "12",
-  "generatedAt": "2026-08-28T21:45:04Z",
+  "manifestVersion": "13",
+  "generatedAt": "2026-10-09T14:39:00Z",
   "chainId": 1,
   "caip2": "eip155:1",
   "supportedChainIds": [
@@ -24,7 +24,7 @@
       "chainId": 4663,
       "caip2": "eip155:4663",
       "name": "Robinhood Chain Mainnet",
-      "status": "planned",
+      "status": "live",
       "manifestUrl": "https://developers.programmable.family/api/v2/manifests/4663",
       "readModelStatus": "planned",
       "finalizedFeedUrl": "https://api.programmable.market/v4/chains/4663/finalized-custom-launches"
@@ -2237,5 +2237,21 @@
     "unknownMarketKinds": "display-as-unsupported",
     "deploymentDiscovery": "refresh-manifest",
     "hardcodeDeploymentAddresses": false
+  },
+  "extensions": {
+    "programmable/module-discovery-v1": {
+      "schemaVersion": "programmable.module-discovery.v1",
+      "chainId": 1,
+      "identityKey": [
+        "chainId",
+        "tokenAddress"
+      ],
+      "guideUrl": "https://programmable.market/developers/foundation-indexing.md",
+      "launchFeedUrl": "https://programmable.market/api/explore/ethereum?page=1&pageSize=50&sort=newest",
+      "availabilityUrl": "https://programmable.market/api/module-foundation?chainId=1",
+      "sourceKind": "canonical-router-module-graph",
+      "sourceUrl": "https://programmable.market/api/indexers/v1/router-custom-identities",
+      "normalizedDeveloperFeedCoversAllModuleSources": false
+    }
   }
 }

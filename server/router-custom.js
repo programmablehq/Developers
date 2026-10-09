@@ -105,8 +105,8 @@ const FINALIZED_CUSTOM_METADATA_TIMEOUT_MS = 6_000;
 const FINALIZED_CUSTOM_METADATA_MAXIMUM_PAGES = 400;
 const ROUTER_CUSTOM_CACHE_MS = 15_000;
 const ROUTER_CUSTOM_FINALIZED_HEAD_MAXIMUM_LAG_BLOCKS = 256;
-const ROUTER_CUSTOM_FINALIZED_SCAN_MAXIMUM_BLOCKS = 250_000;
 const ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS = 10_000;
+const ROUTER_CUSTOM_READ_CONCURRENCY = 6;
 // Only records produced after validating the complete source commitment receive
 // this non-serializable capability. A source-shaped object cannot self-assign it.
 const TRUSTED_CURRENT_ROUTER_RECORD = Symbol("trusted-current-router-record");
@@ -118,6 +118,19 @@ const ACCEPTED_ROUTER_MEMBERSHIP = Symbol("accepted-router-membership");
 let bundledSnapshotPromise = null;
 let cache = null;
 let cachePromise = null;
+
+async function mapBounded(items, mapper) {
+  const results = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(items.length, ROUTER_CUSTOM_READ_CONCURRENCY) }, async () => {
+    for (;;) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await mapper(items[index]);
+    }
+  }));
+  return results;
+}
 // The Website source owns the durable append-only snapshot. Retain the newest
 // accepted copy inside a warm Developers process as an additional fail-closed
 // guard and as a short-lived LKG if the next source read fails.
@@ -887,16 +900,11 @@ function requireCustomRecordMatchesLog(record, log, binding) {
   }
 }
 
-async function finalizedCustomLaunchLogs(binding, finalized) {
-  const checkpoint = Number(BigInt(EXPECTED_SNAPSHOT_BOUNDARY.asOfBlock));
+async function finalizedCustomLaunchLogs(binding, finalized, checkpoint) {
   if (finalized.blockNumber < checkpoint) {
     throw new Error("Router finalized boundary regressed behind the trust checkpoint");
   }
-  const gap = finalized.blockNumber - checkpoint;
-  if (gap > ROUTER_CUSTOM_FINALIZED_SCAN_MAXIMUM_BLOCKS) {
-    throw new Error("Router finalized scan requires a refreshed trust checkpoint");
-  }
-  const logs = [];
+  const ranges = [];
   for (
     let fromBlock = checkpoint + 1;
     fromBlock <= finalized.blockNumber;
@@ -906,14 +914,21 @@ async function finalizedCustomLaunchLogs(binding, finalized) {
       finalized.blockNumber,
       fromBlock + ROUTER_CUSTOM_FINALIZED_SCAN_CHUNK_BLOCKS - 1,
     );
+    ranges.push({ fromBlock, toBlock });
+  }
+  // Bound individual RPC ranges and concurrency, not the age of the launchpad.
+  // Previously every cold reader stopped accepting launches after 250k blocks.
+  const pages = await mapBounded(ranges, async ({ fromBlock, toBlock }) => {
     const response = await readLogs({
       address: binding.address,
       fromBlock: toQuantity(fromBlock),
       toBlock: toQuantity(toBlock),
       topics: [binding.launchStampedTopic],
     }, finalized.provider);
-    logs.push(...response.logs.map((raw) => decodedLaunchLog(raw, binding)));
-  }
+    return response.logs.map((raw) => decodedLaunchLog(raw, binding));
+  });
+  const logs = pages.flat();
+  if (logs.length > 10_000) throw new Error("Router finalized identity set exceeds its bound");
   const unique = new Set();
   const records = new Map();
   const custom = [];
@@ -921,17 +936,19 @@ async function finalizedCustomLaunchLogs(binding, finalized) {
     const key = launchLogKey(log);
     if (unique.has(key)) throw new Error("Router finalized scan returned duplicates");
     unique.add(key);
+  }
+  await mapBounded(logs, async log => {
     const record = await readStampRecord(
       binding,
       log.launchId,
       finalized.blockNumber,
       finalized.provider,
     );
-    if (record.kind !== binding.customGraphKind) continue;
+    if (record.kind !== binding.customGraphKind) return;
     requireCustomRecordMatchesLog(record, log, binding);
     records.set(log.launchId, record);
     custom.push(log);
-  }
+  });
   return { logs: custom, records };
 }
 
@@ -963,7 +980,6 @@ async function requireFinalizedSourceEntry(entry, log, record, binding, finalize
   const receipt = receiptResponse.result;
   if (
     !receipt || receipt.status !== "0x1" ||
-    !sameHex(receipt.to, binding.address) ||
     !sameHex(receipt.transactionHash, entry.transactionHash) ||
     !sameHex(receipt.blockHash, entry.blockHash) ||
     String(parseQuantity(receipt.blockNumber)) !== entry.blockNumber ||
@@ -978,7 +994,7 @@ async function requireFinalizedSourceEntry(entry, log, record, binding, finalize
       sameHex(raw?.topics?.[0], binding.launchStampedTopic))
     .map((raw) => decodedLaunchLog(raw, binding))
     .find((candidate) => launchLogKey(candidate) === launchLogKey(log));
-  if (!receiptLog || receiptLog.launchId !== log.launchId) {
+  if (!receiptLog || Object.keys(log).some(key => receiptLog[key] !== log[key])) {
     throw new Error("Router Custom launch receipt does not contain the stamped event");
   }
 
@@ -1015,7 +1031,7 @@ async function requireFinalizedSourceEntry(entry, log, record, binding, finalize
   }
 }
 
-async function currentSource(manifest) {
+async function currentSource(manifest, baseline) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ROUTER_CUSTOM_SOURCE_TIMEOUT_MS);
   try {
@@ -1064,7 +1080,7 @@ async function currentSource(manifest) {
         throw new Error("Router Custom source entries are not canonically ordered");
       }
     }
-    const entries = validateCurrentIdentitySet(
+    const sourceEntries = validateCurrentIdentitySet(
       payload.entries.map((entry) => sourceEntry(entry, binding, boundary)),
     );
     const finalized = await readFinalizedBlock();
@@ -1096,12 +1112,24 @@ async function currentSource(manifest) {
       throw new Error("Router Custom source boundary is not canonical");
     }
 
-    const chain = await finalizedCustomLaunchLogs(binding, finalized);
-    const additions = entries.filter((entry) =>
-      !EXPECTED_ENTRY_SHA256_BY_LAUNCH_ID.has(entry.launchId.toLowerCase()));
+    // A source can be ahead of this provider's finalized view. Publish its
+    // independently verified prefix instead of dropping every newer launch.
+    const publicationBlock = Math.min(sourceBlockNumber,
+      finalized.blockNumber - binding.finalityConfirmations);
+    const checkpoint = Number(BigInt(baseline.asOfBlock));
+    if (publicationBlock < checkpoint) throw new Error("Router finalized boundary regressed behind the accepted checkpoint");
+    const publication = await readBlock(publicationBlock, finalized.provider);
+    if (baseline.trustedCurrent) {
+      const accepted = await readBlock(checkpoint, finalized.provider);
+      if (!sameHex(accepted.blockHash, baseline.asOfBlockHash)) throw new Error("Router accepted checkpoint is no longer canonical");
+    }
+    const entries = sourceEntries.filter(entry => Number(BigInt(entry.blockNumber)) <= publicationBlock);
+    const acceptedIds = new Set(baseline.entries.map(entry => entry.launchId.toLowerCase()));
+    const chain = await finalizedCustomLaunchLogs(binding, { ...finalized, blockNumber: publicationBlock }, checkpoint);
+    const additions = entries.filter(entry => !acceptedIds.has(entry.launchId.toLowerCase()));
     if (
       additions.some((entry) =>
-        BigInt(entry.blockNumber) <= BigInt(EXPECTED_SNAPSHOT_BOUNDARY.asOfBlock)) ||
+        BigInt(entry.blockNumber) <= BigInt(baseline.asOfBlock)) ||
       additions.length !== chain.logs.length
     ) {
       throw new Error("Router Custom source is not the complete finalized suffix");
@@ -1109,7 +1137,7 @@ async function currentSource(manifest) {
     const sourceByLaunch = new Map(
       additions.map((entry) => [entry.launchId.toLowerCase(), entry]),
     );
-    for (const log of chain.logs) {
+    await mapBounded(chain.logs, async log => {
       const entry = sourceByLaunch.get(log.launchId);
       const record = chain.records.get(log.launchId);
       if (!entry || !record) {
@@ -1122,13 +1150,24 @@ async function currentSource(manifest) {
         binding,
         finalized,
       );
-    }
+    });
     const closing = await readBlock(finalized.blockNumber, finalized.provider);
     if (!sameHex(closing.blockHash, finalized.blockHash)) {
       throw new Error("Router Custom finalized boundary changed during verification");
     }
     return {
       ...boundary,
+      asOfBlock: String(publicationBlock),
+      asOfBlockHash: publication.blockHash,
+      sourceIdentityCommitment: canonicalSha256(ROUTER_CUSTOM_SNAPSHOT_SCHEMA, {
+        chainId: binding.chainId,
+        source: payload.source,
+        asOfBlock: String(publicationBlock),
+        asOfBlockHash: publication.blockHash.toLowerCase(),
+        finalityConfirmations: payload.finalityConfirmations,
+        entries: payload.entries.filter(entry =>
+          BigInt(entry.launchStampProvenance.blockNumber) <= BigInt(publicationBlock)),
+      }),
       snapshotSha256: canonicalSha256(
         "programmable.router-custom-source-snapshot.v1",
         payload,
@@ -2139,7 +2178,7 @@ export async function readRouterCustomRecords(manifest) {
     }
     let snapshot = lastKnownGoodSnapshot(baseline);
     try {
-      snapshot = selectSnapshot(baseline, await currentSource(manifest));
+      snapshot = selectSnapshot(baseline, await currentSource(manifest, baseline));
       lastAcceptedSourceSnapshot = snapshot;
     } catch {
       snapshot = lastKnownGoodSnapshot(baseline);

@@ -4,6 +4,16 @@ Use the hosted API when the selected chain has a released read model. Independen
 
 Both paths must use the same identities and lifecycle rules.
 
+## Module Mode sources
+
+Read the chain manifest's `extensions["programmable/module-discovery-v1"]` for Module Mode discovery. Its `launchFeedUrl` exposes current website records; follow every page and preserve each source's evidence. The normalized Developer v2 feed does not yet cover every module source, so its absence cannot reject a module launch.
+
+Ethereum Module Mode has a canonical `custom-graph` Router stamp. Verify that stamp, then bind the module graph proxy and implementation from `availabilityUrl` using the [Foundation guide](https://programmable.market/developers/foundation-indexing.md#ethereum-module-launches). Keep the token address as the coin identity; the graph account is a separate component. A public `custom` category does not exclude Module Mode.
+
+Robinhood Foundation uses versioned factory events instead of a Custom Router stamp. Enumerate every entry at `releaseInventoryUrl` and follow its `availabilityPath`; retaining only the current factory loses earlier launches. Resolve existing tokens through `availabilityUrl` with the `token` query parameter. Earlier Native and Engine sources have their own adapters in the [Module Mode indexing guide](https://programmable.market/developers/module-mode-indexing.md).
+
+Keep `(chainId, tokenAddress)` as the identity. Missing token names, prices, images, supported module controls or external launchpad labels must not remove a verified launch. Receipt-confirmed observations and finalized source records are separate states.
+
 ## Hosted feed path
 
 1. Bootstrap from `/.well-known/programmable.json`.
@@ -27,6 +37,8 @@ Active v2 Classic discovery contains the historical V3 release and current V4 re
 For applicant ingestion, require `customRegistryPublication.expectedSourceId === customRegistryPublication.observedSourceId`, `sourceConfigured`, `sourceCurrent`, and `sourceReady`. The current Generation 1 source is `programmable-custom-launch-registry-v3`; do not substitute the Website v1 presentation mirror or merge it with the Developer manifest. Treat `baselineLaunches` as canary coverage and `applicantLaunches` as the separate real-applicant count.
 
 Router Custom discovery is an independent lane. Require `routerCustom.status === "current"` and equal verified and published identity counts before treating absence as authoritative. A `last-known-good` Router snapshot remains ingestible, but it must not be merged into Registry applicant coverage or used to produce a final deletion or 404 conclusion.
+
+The Router verifier scans bounded block ranges from its last accepted canonical checkpoint and verifies new receipts, events and record getters. Smart-wallet launches may have an EntryPoint or controller as the outer transaction recipient; origin is established by the exact Router event and onchain bindings, not by requiring the transaction's `to` address to be the Router.
 
 Robinhood chain 4663 publishes a live `directChainIntegration` and canonical
 `launchStampRouter`. Resolve the Router address, start block, runtime hash,
