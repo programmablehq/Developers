@@ -394,6 +394,7 @@ function serveSource(payload, options = {}) {
         : new Response("unavailable", { status: 503 });
     }
     const request = JSON.parse(String(init.body));
+    options.rpcRequests?.push(request);
     const [first, second] = request.params ?? [];
     let result;
     if (request.method === "eth_getBlockByNumber") {
@@ -434,7 +435,7 @@ function serveSource(payload, options = {}) {
         entry.transactionHash === String(first).toLowerCase());
       result = identity ? {
         status: options.receiptStatus ?? "0x1",
-        to: manifest.launchStampRouter.address,
+        to: options.receiptTo ?? manifest.launchStampRouter.address,
         transactionHash: identity.transactionHash,
         blockNumber: quantity(identity.blockNumber),
         blockHash: identity.blockHash,
@@ -488,6 +489,42 @@ async function fallbackRecords() {
 }
 
 describe("Router Custom v2 projection", () => {
+  test("recognizes a canonical Router launch executed through an ERC-4337 EntryPoint", async () => {
+    serveSource(currentSourcePayload(), { receiptTo: "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789" });
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "current");
+    assert.ok(snapshot.records.some(record => record.token.symbol === "NEXT"));
+  });
+  test("keeps discovering finalized launches more than 250k blocks after the bootstrap checkpoint", async () => {
+    const payload = currentSourcePayload();
+    payload.asOfBlock = String(BigInt(bundledSource.asOfBlock) + 300_000n);
+    recommitSourcePayload(payload);
+    serveSource(payload, { chainPayload: payload });
+    const snapshot = await readRouterCustomRecords(manifest);
+    assert.equal(snapshot.status, "current");
+    assert.equal(snapshot.verifiedIdentityCount, 3);
+    assert.ok(snapshot.records.some(record => record.token.symbol === "NEXT"));
+  });
+
+  test("resumes at the last verified checkpoint without rereading old launch receipts", async () => {
+    const payload = currentSourcePayload();
+    serveSource(payload);
+    const first = await readRouterCustomRecords(manifest);
+    assert.equal(first.status, "current");
+    resetRouterCustomCacheForTest({ preserveAcceptedSource: true });
+    payload.asOfBlock = String(BigInt(payload.asOfBlock) + 1n);
+    recommitSourcePayload(payload);
+    const rpcRequests = [];
+    serveSource(payload, { chainPayload: payload, rpcRequests });
+    const second = await readRouterCustomRecords(manifest);
+    assert.equal(second.status, "current");
+    assert.equal(second.records.length, first.records.length);
+    const ranges = rpcRequests.filter(request => request.method === "eth_getLogs");
+    assert.ok(ranges.length > 0);
+    assert.ok(ranges.every(request => BigInt(request.params[0].fromBlock) > BigInt(first.asOfBlock)));
+    assert.equal(rpcRequests.filter(request => request.method === "eth_getTransactionReceipt").length, 0);
+  });
+
   test("keeps the bounded PCAN and FADE identities when live enrichment is unavailable", async () => {
     const snapshot = await fallbackRecords();
     assert.equal(snapshot.status, "last-known-good");
