@@ -2,8 +2,8 @@
   "$schema": "https://developers.programmable.family/schemas/v2/manifest.schema.json",
   "schemaVersion": "2.0.0",
   "platformId": "programmable",
-  "manifestVersion": "3",
-  "generatedAt": "2026-10-09T14:39:00Z",
+  "manifestVersion": "4",
+  "generatedAt": "2026-10-09T15:04:15Z",
   "chainId": 4663,
   "caip2": "eip155:4663",
   "supportedChainIds": [
@@ -1209,7 +1209,7 @@
         "chainId",
         "tokenAddress"
       ],
-      "guideUrl": "https://programmable.market/developers/foundation-indexing.md",
+      "guideUrl": "https://programmable.market/docs/developers/indexing/foundation-indexing",
       "launchFeedUrl": "https://programmable.market/api/explore/robinhood?page=1&pageSize=50&sort=newest",
       "availabilityUrl": "https://programmable.market/api/module-foundation?chainId=4663",
       "sourceKind": "versioned-module-factory",
