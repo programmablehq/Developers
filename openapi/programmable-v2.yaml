@@ -55,11 +55,10 @@ info:
     Classic V1 and V2 remain inactive manifest history and are not scanned.
     Manifest-following consumers receive V4 through a normal refresh without a
     client code or address change. The hosted Classic baseline is the complete
-    paginated `https://programmable.market/api/explore` catalog, validated
-    through schema, scope, evidence and identity commitments. It currently
-    reports Envio deployment `production-6157d22`; legitimate deployment
-    revisions do not require code changes. The retired HTTP 410 legacy source
-    is not used. Custom discovery remains separate and includes Registry-verified and
+    `https://programmable.market/api/indexers/v1/classic-identities` snapshot,
+    backed by Codex discovery and canonical receipts. Schema, release bindings,
+    identity commitment and canonical block hash are verified. Source freshness
+    is preserved; the retired Envio `/api/explore` route is not used. Custom discovery remains separate and includes Registry-verified and
     finalized Router-stamped launches. The Router is provenance and transport,
     not a public category. The separate authenticated Custom Launch
     API V1 at `https://api.programmable.market` keeps provenance reads and status
@@ -431,11 +430,11 @@ paths:
       description: |
         Returns Classic and Custom launches through one cursor-paginated
         envelope. Classic covers manifest-enabled V3 and V4 only. Its hosted
-        baseline is the fully traversed paginated
-        `https://programmable.market/api/explore` catalog, validated through
-        schema, scope, evidence and identity commitments and currently reporting
-        Envio deployment `production-6157d22`; the retired HTTP 410 legacy source
-        is not queried.
+        baseline is the complete
+        `https://programmable.market/api/indexers/v1/classic-identities` snapshot,
+        backed by Codex discovery and canonical receipts. Schema, release bindings,
+        identity commitment and canonical block hash are verified, preserving
+        source freshness. The retired Envio `/api/explore` route is not queried.
         A launch can contain zero, one or several markets. The API
         never fabricates a pool for a token without one. Token amounts are raw
         decimal integer strings. Persist `page.resumeCursor` after processing a

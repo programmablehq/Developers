@@ -1,26 +1,12 @@
-import { createHash } from "node:crypto";
-
-import {
-  CHAIN_ID,
-  CLASSIC_CATALOG_SOURCE,
-  CLASSIC_CATALOG_SOURCE_URL,
-  FINALITY_CONFIRMATIONS,
-  RELEASE_BY_ID,
-  REQUEST_LIMITS,
-} from "./constants.js";
+import { CHAIN_ID, CLASSIC_CATALOG_SOURCE, CLASSIC_CATALOG_SOURCE_URL, FINALITY_CONFIRMATIONS, RELEASE_BY_ID, REQUEST_LIMITS } from "./constants.js";
 import { readBoundedText } from "./bounded-body.js";
+import { canonicalSha256 } from "./canonical.js";
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const HASH32 = /^0x[0-9a-fA-F]{64}$/;
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
-const GIT_COMMIT = /^(?!0{40}$)[0-9a-f]{40}$/;
-const SOURCE_DEPLOYMENT = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
-const MAXIMUM_PAGES = 10;
-const MAXIMUM_TOKENS = 1_000;
-const MAXIMUM_AGGREGATE_BYTES = 5_000_000;
-const PAGE_SIZE = 100;
-const RETRY_DELAYS_MS = Object.freeze([250, 750]);
+const MAXIMUM_TOKENS = 10_000;
 
 function boundedInteger(value) {
   const parsed = typeof value === "string" ? Number(value) : value;
@@ -74,116 +60,6 @@ function normalizedLinks(value) {
     if (url && !Object.hasOwn(links, key)) links[key] = url;
   }
   return links;
-}
-
-function stableCatalogBoundary(payload) {
-  const catalog = payload?.catalog;
-  const evidence = catalog?.evidence;
-  const dataQuality = payload?.dataQuality;
-  const included = catalog?.scope?.included;
-  const excluded = catalog?.scope?.excluded;
-  const asOfBlock = boundedInteger(catalog?.asOfBlock);
-  const generatedAt = instant(catalog?.lastIndexedAt);
-  if (
-    payload?.status !== "ready" ||
-    !catalog ||
-    catalog.source !== CLASSIC_CATALOG_SOURCE.catalogSource ||
-    catalog.launchSource !== CLASSIC_CATALOG_SOURCE.launchSource ||
-    !["current", "last-known-good"].includes(catalog.status) ||
-    catalog.completeness?.classic !== "current" ||
-    !Array.isArray(included) ||
-    CLASSIC_CATALOG_SOURCE.requiredScope.some((scope) => !included.includes(scope)) ||
-    !Array.isArray(excluded) ||
-    CLASSIC_CATALOG_SOURCE.requiredExcludedScope.some(
-      (scope) => !excluded.includes(scope),
-    ) ||
-    !Array.isArray(catalog.scope?.publicCategories) ||
-    catalog.scope.publicCategories.length !== 2 ||
-    !catalog.scope.publicCategories.includes("classic") ||
-    !catalog.scope.publicCategories.includes("custom") ||
-    evidence?.kind !== CLASSIC_CATALOG_SOURCE.evidenceKind ||
-    !SOURCE_DEPLOYMENT.test(evidence.deployment ?? "") ||
-    !GIT_COMMIT.test(evidence.sourceCommit ?? "") ||
-    !SHA256.test(evidence.commitment ?? "") ||
-    !SHA256.test(catalog.identityCommitment ?? "") ||
-    hash32(catalog.asOfBlockHash) === null ||
-    asOfBlock === null ||
-    generatedAt === null ||
-    decimal(evidence.progressBlock) === null ||
-    evidence.progressBlock !== catalog.asOfBlock ||
-    !Number.isSafeInteger(catalog.identityCount) ||
-    catalog.identityCount < 1 ||
-    dataQuality?.schemaVersion !== CLASSIC_CATALOG_SOURCE.schemaVersion ||
-    dataQuality?.launchIdentity?.status !== "current" ||
-    dataQuality.launchIdentity.canonical !== "current" ||
-    dataQuality.launchIdentity.asOfBlock !== catalog.asOfBlock
-  ) {
-    throw new Error("Classic catalog source binding is invalid");
-  }
-  return {
-    blockNumber: asOfBlock,
-    blockHash: catalog.asOfBlockHash,
-    generatedAt,
-    identityCount: catalog.identityCount,
-    identityCommitment: catalog.identityCommitment,
-    status: catalog.status,
-    schemaVersion: dataQuality.schemaVersion,
-    scope: JSON.stringify({
-      included: [...new Set(included)].sort(),
-      excluded: [...new Set(excluded)].sort(),
-      publicCategories: [...new Set(catalog.scope.publicCategories)].sort(),
-    }),
-    deployment: evidence.deployment,
-    sourceCommit: evidence.sourceCommit,
-    evidenceCommitment: evidence.commitment,
-  };
-}
-
-function sameCatalogIdentity(left, right) {
-  return [
-    "identityCount",
-    "identityCommitment",
-    "status",
-    "schemaVersion",
-    "scope",
-    "deployment",
-    "sourceCommit",
-  ].every((key) => left[key] === right[key]);
-}
-
-function conservativePageBoundary(pageBoundaries) {
-  const ordered = pageBoundaries
-    .map(({ page, boundary }) => ({
-      page,
-      block: boundary.blockNumber,
-      hash: boundary.blockHash.toLowerCase(),
-      evidenceCommitment: boundary.evidenceCommitment,
-    }))
-    .sort((left, right) => left.page - right.page);
-  const hashesByBlock = new Map();
-  for (const entry of ordered) {
-    const existing = hashesByBlock.get(entry.block);
-    if (existing !== undefined && existing !== entry.hash) {
-      throw new Error("Classic catalog changed during page traversal");
-    }
-    hashesByBlock.set(entry.block, entry.hash);
-  }
-  const anchor = [...pageBoundaries].sort(
-    (left, right) =>
-      left.boundary.blockNumber - right.boundary.blockNumber ||
-      left.page - right.page,
-  )[0].boundary;
-  return {
-    anchor,
-    pageBoundaryCommitment: `sha256:${createHash("sha256")
-      .update(`${JSON.stringify(ordered)}\n`)
-      .digest("hex")}`,
-    pageBoundaryCount: ordered.length,
-  };
-}
-
-function expectedPageLength(page, total, totalPages) {
-  return page < totalPages ? PAGE_SIZE : total - PAGE_SIZE * (totalPages - 1);
 }
 
 function normalizedClassicToken(token) {
@@ -268,168 +144,68 @@ function normalizedClassicToken(token) {
   };
 }
 
-async function readPage(page, fetcher) {
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    REQUEST_LIMITS.classicCatalogTimeoutMs,
-  );
-  const url = new URL(CLASSIC_CATALOG_SOURCE_URL);
-  url.searchParams.set("limit", String(PAGE_SIZE));
-  url.searchParams.set("model", "classic");
-  url.searchParams.set("page", String(page));
-  url.searchParams.set("sort", "newest");
-  try {
-    const response = await fetcher(url, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "programmable-developer-api/2",
-      },
-      redirect: "error",
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new Error(`Classic catalog returned HTTP ${response.status}`);
+
+export async function readClassicCatalogFeed(fetcher = fetch) {
+  const response = await fetcher(CLASSIC_CATALOG_SOURCE_URL, {
+    headers: { Accept: "application/json", "User-Agent": "programmable-developer-api/2" },
+    redirect: "error", signal: AbortSignal.timeout(REQUEST_LIMITS.classicCatalogTimeoutMs),
+  });
+  if (!response.ok) throw new Error(`Classic catalog returned HTTP ${response.status}`);
+  const payload = JSON.parse(await readBoundedText(response, REQUEST_LIMITS.classicCatalogResponseBytes, "Classic catalog response"));
+  const blockNumber = boundedInteger(payload?.asOfBlock);
+  const entries = payload?.entries;
+  const evidence = payload?.evidence;
+  if (payload?.schemaVersion !== CLASSIC_CATALOG_SOURCE.schemaVersion || payload.chainId !== CHAIN_ID
+    || payload.source !== CLASSIC_CATALOG_SOURCE.catalogSource || !["current", "last-known-good"].includes(payload.status)
+    || blockNumber === null || decimal(payload.asOfBlock) === null || hash32(payload.asOfBlockHash) === null
+    || instant(payload.generatedAt) === null || payload.finalityConfirmations !== FINALITY_CONFIRMATIONS
+    || !Array.isArray(entries) || entries.length === 0 || entries.length > MAXIMUM_TOKENS
+    || payload.identityCount !== entries.length || !SHA256.test(payload.identityCommitment ?? "")
+    || !SHA256.test(payload.releaseDigest ?? "") || evidence?.provider !== "codex"
+    || !SHA256.test(evidence.commitment ?? "") || evidence.releaseDigest !== payload.releaseDigest
+    || instant(evidence.observedAt) === null || payload.release?.chainId !== CHAIN_ID
+    || payload.release.confirmations !== FINALITY_CONFIRMATIONS || !Array.isArray(payload.release.sources)
+    || canonicalSha256("programmable.classic-launch-catalog.v1", payload.release) !== payload.releaseDigest) {
+    throw new Error("Classic catalog source binding is invalid");
+  }
+  const identity = { chainId: payload.chainId, releaseDigest: payload.releaseDigest,
+    asOfBlock: payload.asOfBlock, asOfBlockHash: payload.asOfBlockHash, entries };
+  if (canonicalSha256(CLASSIC_CATALOG_SOURCE.schemaVersion, identity) !== payload.identityCommitment) {
+    throw new Error("Classic catalog identity commitment is invalid");
+  }
+  for (const id of CLASSIC_CATALOG_SOURCE.activeReleases) {
+    const release = RELEASE_BY_ID.get(id);
+    const declared = payload.release.sources.filter(item => item.version === id);
+    if (declared.length !== 1 || declared[0].launcher?.toLowerCase() !== release.launcher.toLowerCase()
+      || declared[0].hook?.toLowerCase() !== release.hook.toLowerCase()
+      || String(declared[0].startBlock) !== String(release.startBlock)) {
+      throw new Error("Classic catalog release binding is invalid");
     }
-    const source = await readBoundedText(
-      response,
-      REQUEST_LIMITS.classicCatalogResponseBytes,
-      "Classic catalog response",
-    );
-    return {
-      payload: JSON.parse(source),
-      byteLength: Buffer.byteLength(source, "utf8"),
-    };
-  } finally {
-    clearTimeout(timeout);
   }
-}
-
-function paginationShape(payload) {
-  const total = boundedInteger(payload?.total);
-  const totalPages = boundedInteger(payload?.totalPages);
-  if (
-    total === null || total > MAXIMUM_TOKENS || totalPages === null ||
-    totalPages < 1 || totalPages > MAXIMUM_PAGES ||
-    totalPages !== Math.max(1, Math.ceil(total / PAGE_SIZE))
-  ) throw new Error("Classic catalog pagination is invalid");
-  return { total, totalPages };
-}
-
-async function readClassicCatalogSnapshot(fetcher) {
-  const firstPage = await readPage(1, fetcher);
-  const first = firstPage.payload;
-  const boundary = stableCatalogBoundary(first);
-  const { total, totalPages } = paginationShape(first);
-  if (
-    first.page !== 1 ||
-    first.pageSize !== PAGE_SIZE ||
-    !Array.isArray(first.tokens) ||
-    first.tokens.length !== expectedPageLength(1, total, totalPages)
-  ) {
-    throw new Error("Classic catalog pagination is invalid");
-  }
-  const pages = [
-    firstPage,
-    ...await Promise.all(
-      Array.from(
-        { length: totalPages - 1 },
-        (_, index) => readPage(index + 2, fetcher),
-      ),
-    ),
-  ];
-
-  let aggregateBytes = firstPage.byteLength;
-  let rawTokenCount = first.tokens.length;
   const seen = new Set();
   const tokens = [];
-  const pageBoundaries = [{ page: 1, boundary }];
-  function accumulate(rawTokens) {
-    for (const raw of rawTokens) {
-      if (!CLASSIC_CATALOG_SOURCE.activeReleases.includes(raw?.launchModelVersion)) {
-        continue;
-      }
-      const token = normalizedClassicToken(raw);
-      const key = token.address.toLowerCase();
-      if (seen.has(key)) throw new Error("Classic catalog contains a duplicate token");
-      seen.add(key);
-      tokens.push(token);
+  for (const entry of entries) {
+    const key = address(entry?.tokenAddress)?.toLowerCase();
+    if (!key || seen.has(key) || entry.launchCategoryProvenance?.category !== "classic"
+      || entry.launchCategoryProvenance?.source !== "canonical-launch-read-model"
+      || !payload.release.sources.some(source => source.version === entry.launchModelVersion)) {
+      throw new Error("Classic catalog identity set is invalid");
     }
-  }
-  accumulate(first.tokens);
-  for (let page = 2; page <= totalPages; page += 1) {
-    const pageResult = pages[page - 1];
-    const payload = pageResult.payload;
-    const pageBoundary = stableCatalogBoundary(payload);
-    if (
-      !sameCatalogIdentity(boundary, pageBoundary) ||
-      payload.total !== total ||
-      payload.totalPages !== totalPages ||
-      payload.page !== page ||
-      payload.pageSize !== PAGE_SIZE ||
-      !Array.isArray(payload.tokens) ||
-      payload.tokens.length !== expectedPageLength(page, total, totalPages)
-    ) {
-      throw new Error("Classic catalog changed during page traversal");
+    seen.add(key);
+    if (!CLASSIC_CATALOG_SOURCE.activeReleases.includes(entry.launchModelVersion)) continue;
+    const token = normalizedClassicToken(entry);
+    const release = RELEASE_BY_ID.get(entry.launchModelVersion);
+    if (Number(token.launch.blockNumber) < release.startBlock || Number(token.launch.blockNumber) > blockNumber) {
+      throw new Error("Classic catalog token block is outside source coverage");
     }
-    pageBoundaries.push({ page, boundary: pageBoundary });
-    aggregateBytes += pageResult.byteLength;
-    if (aggregateBytes > MAXIMUM_AGGREGATE_BYTES) {
-      throw new Error("Classic catalog exceeds the aggregate response limit");
-    }
-    rawTokenCount += payload.tokens.length;
-    accumulate(payload.tokens);
+    tokens.push(token);
   }
-
-  if (rawTokenCount !== total) {
-    throw new Error("Classic catalog pagination is invalid");
-  }
-  if (tokens.length === 0 || !tokens.some((token) =>
-    token.launch.modelVersion === "classic-v4")) {
+  if (!tokens.some(token => token.launch.modelVersion === "classic-v4")) {
     throw new Error("Classic catalog identity set is incomplete");
   }
-  const pagingBoundary = conservativePageBoundary(pageBoundaries);
-  const anchor = pagingBoundary.anchor;
-  return {
-    reportedStatus: boundary.status,
-    schemaVersion: CLASSIC_CATALOG_SOURCE.schemaVersion,
-    source: {
-      deployment: boundary.deployment,
-      sourceCommit: boundary.sourceCommit,
-      identityCount: boundary.identityCount,
-      identityCommitment: boundary.identityCommitment,
-      evidenceCommitment: anchor.evidenceCommitment,
-      pageBoundaryCommitment: pagingBoundary.pageBoundaryCommitment,
-      pageBoundaryCount: pagingBoundary.pageBoundaryCount,
-      generatedAt: anchor.generatedAt,
-    },
-    snapshot: {
-      blockNumber: anchor.blockNumber,
-      blockHash: anchor.blockHash,
-      confirmations: FINALITY_CONFIRMATIONS,
-    },
-    tokens,
-  };
-}
-
-function delay(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-export async function readClassicCatalogFeed(fetcher = fetch, wait = delay) {
-  let lastError = null;
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
-    try {
-      return await readClassicCatalogSnapshot(fetcher);
-    } catch (error) {
-      if (error?.message !== "Classic catalog changed during page traversal") {
-        throw error;
-      }
-      lastError = error;
-      if (attempt < RETRY_DELAYS_MS.length) {
-        await wait(RETRY_DELAYS_MS[attempt]);
-      }
-    }
-  }
-  throw lastError;
+  return { reportedStatus: payload.status, schemaVersion: payload.schemaVersion,
+    source: { provider: "codex", releaseDigest: payload.releaseDigest, identityCount: entries.length,
+      identityCommitment: payload.identityCommitment, evidenceCommitment: evidence.commitment,
+      generatedAt: payload.generatedAt, observedAt: evidence.observedAt },
+    snapshot: { blockNumber, blockHash: payload.asOfBlockHash, confirmations: FINALITY_CONFIRMATIONS }, tokens };
 }

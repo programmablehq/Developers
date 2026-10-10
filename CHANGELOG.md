@@ -15,6 +15,8 @@ This project follows [Semantic Versioning](https://semver.org/) and the compatib
 
 ## [Unreleased]
 
+- Restore the hosted Ethereum Classic baseline through the public Codex-backed identity snapshot, independent of Explore visibility filters and the retired Envio route. Preserve source freshness, release bindings and canonical block verification.
+
 - Preserve the strict Robinhood V4 source-verification projection separately from canonical-Router provenance and Ethereum finality, and reserve `exact_match` for durable Sourcify V2 exact evidence.
 - Activate Classic V4 discovery alongside historical V3 through manifest refresh, keep Classic V1 and V2 out of active scans, and exclude Stock-Paired records from active v2 discovery while preserving the immutable v1 compatibility snapshot.
 - Replace the retired HTTP 410 Classic source with the complete paginated `https://programmable.market/api/explore` catalog bound to Envio deployment `production-6157d22`, and publish separate exact Classic V4 Router canary evidence with `classicOnchainCanary: true`. Router remains provenance and transport rather than a public category.
