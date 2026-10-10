@@ -89,7 +89,7 @@ behavior.
 
 ## Classic source verification
 
-The hosted baseline is the canonical paginated `https://programmable.market/api/explore` catalog, accepted only when its schema, scope, evidence and identity commitments are internally consistent. Its currently observed Envio deployment is `production-6157d22`; a valid future deployment revision does not require client code changes. The retired legacy source that returned HTTP `410` is not a verification dependency. A direct onchain verifier independently scans only the enabled V3/V4 manifest entries.
+The hosted Classic baseline is the complete `https://programmable.market/api/indexers/v1/classic-identities` snapshot, backed by Codex discovery and canonical Ethereum receipts. The service verifies the versioned schema, release bindings, identity commitment and canonical block hash. It preserves the source freshness and does not use the retired Envio `/api/explore` route. A direct verifier independently scans the enabled V3/V4 manifest entries.
 
 For each enabled Classic V3 or V4 deployment:
 

@@ -34,7 +34,7 @@ Use this checklist before enabling Programmable labels or automated ingestion in
 
 ## Feed ingestion
 
-- [ ] Accept the hosted Classic baseline only from the canonical paginated `https://programmable.market/api/explore` catalog with consistent schema, scope, evidence and identity commitments; record the reported Envio deployment and do not fall back to the retired HTTP `410` legacy source.
+- [ ] Verify the Classic baseline from the public identity snapshot, including schema, release bindings, identity commitment, freshness and canonical block hash; do not use the retired Envio `/api/explore` route.
 - [ ] Backfill every page with `page.nextCursor`.
 - [ ] Commit all represented records before persisting `page.resumeCursor`.
 - [ ] Send the durable resume cursor as `after` for the next poll.

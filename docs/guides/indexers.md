@@ -53,7 +53,7 @@ Keep `(chainId, tokenAddress)` as the identity. Missing token names, prices, ima
 
 Cursors are opaque. Return them unchanged and never move them to another chain or category scope. A replayed page must be harmless.
 
-The Developer service obtains its hosted Classic baseline from the canonical paginated `https://programmable.market/api/explore` catalog. It validates the catalog schema, scope, evidence and identity commitments. The Envio deployment identifier is an observed release value, not a permanently pinned acceptance condition. The retired legacy token source returns HTTP `410` and is no longer used. Downstream consumers should continue to use the Developer feed, which exposes the validated normalized projection and its source boundary.
+The hosted Classic baseline is the complete `https://programmable.market/api/indexers/v1/classic-identities` snapshot, backed by Codex discovery and canonical Ethereum receipts. The service verifies the versioned schema, release bindings, identity commitment and canonical block hash. It preserves the source freshness and does not use the retired Envio `/api/explore` route. Consumers can continue using the normalized Developer feed and its source boundary.
 
 Active v2 Classic discovery contains the historical V3 release and current V4 release only. V1 and V2 remain inactive manifest history, and Stock is excluded from active v2 discovery. Custom is ingested separately through its Registry and canonical-Router evidence lanes. The Router is provenance and transport infrastructure, not a public launch category.
 

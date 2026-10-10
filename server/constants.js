@@ -7,21 +7,10 @@ export const CHAIN_ID = 1;
 export const CHAIN_NAME = "Ethereum";
 export const FINALITY_CONFIRMATIONS = 12;
 export const CLASSIC_CATALOG_SOURCE_URL =
-  "https://programmable.market/api/explore";
+  "https://programmable.market/api/indexers/v1/classic-identities";
 export const CLASSIC_CATALOG_SOURCE = Object.freeze({
-  schemaVersion: "programmable.explore-data-quality.v1",
-  catalogSource: "envio-classic-v3",
-  launchSource:
-    "envio-classic-v3+registry.custom-launched+canonical-launch-stamp-router",
-  evidenceKind: "envio-indexer-state",
-  requiredScope: Object.freeze(["classic-v3", "classic-v4"]),
-  requiredExcludedScope: Object.freeze([
-    "classic-v1",
-    "classic-v2",
-    "stock-paired-v1",
-    "stock-paired-v2",
-    "stock-paired-v3",
-  ]),
+  schemaVersion: "programmable.classic-launch-identity-snapshot.v1",
+  catalogSource: "codex-classic-launches",
   activeReleases: Object.freeze(["classic-v3", "classic-v4"]),
 });
 
@@ -102,8 +91,8 @@ export const PUBLIC_RPC_URLS = Object.freeze([
 ]);
 
 export const REQUEST_LIMITS = Object.freeze({
-  classicCatalogTimeoutMs: 6_000,
-  classicCatalogResponseBytes: 2_000_000,
+  classicCatalogTimeoutMs: 15_000,
+  classicCatalogResponseBytes: 16 * 1024 * 1024,
   rpcTimeoutMs: 5_000,
   rpcResponseBytes: 5_000_000,
   rpcLogRange: 10_000,

@@ -49,7 +49,7 @@ No. Read active deployment arrays and start blocks from `/api/v2/manifest`. This
 
 Not if it already refreshes the manifest and scans every enabled release. Active Classic discovery now consists of historical V3 plus current V4; V1/V2 remain inactive history. A generic manifest-driven client discovers V4 without a code or pinned-address change.
 
-The hosted feed uses the canonical paginated `https://programmable.market/api/explore` catalog and validates its schema, scope, evidence and identity commitments. The current catalog reports Envio deployment `production-6157d22`, but a legitimate deployment revision does not require a code update. It no longer depends on the retired legacy source that returned HTTP `410`. Stock is excluded, and Custom remains a separate category and provenance path.
+The hosted Classic baseline is the complete `https://programmable.market/api/indexers/v1/classic-identities` snapshot, backed by Codex discovery and canonical Ethereum receipts. The service verifies the versioned schema, release bindings, identity commitment and canonical block hash. It preserves the source freshness and does not use the retired Envio `/api/explore` route. Active Classic coverage remains V3/V4; Stock is excluded and Custom keeps its separate provenance path.
 
 ## Is Router a third launch category?
 
